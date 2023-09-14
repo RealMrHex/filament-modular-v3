@@ -7,7 +7,6 @@ use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Str;
 use Livewire\Features\SupportTesting\Testable;
 use Nwidart\Modules\Laravel\Module;
-use RealMrHex\FilamentModularV3\Commands\FilamentModularV3Command;
 use RealMrHex\FilamentModularV3\Testing\TestsFilamentModularV3;
 use ReflectionException;
 use Spatie\LaravelPackageTools\Commands\InstallCommand;
@@ -37,10 +36,7 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
                 ->hasInstallCommand(
                     function (InstallCommand $command)
                     {
-                        $command
-                            ->publishConfigFile()
-                            ->askToStarRepoOnGitHub('realmrhex/filament-modular-v3')
-                        ;
+                        $command->askToStarRepoOnGitHub('realmrhex/filament-modular-v3');
                     }
                 )
         ;
@@ -331,8 +327,6 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
      */
     protected function getCommands(): array
     {
-        return [
-            FilamentModularV3Command::class,
-        ];
+        return [];
     }
 }

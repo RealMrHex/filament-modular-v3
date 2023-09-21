@@ -18,7 +18,7 @@ class MakeModularPageCommand extends Command
 
     protected $description = 'Create a new Filament page class and view';
 
-    protected $signature = 'module:filament-page {module?} {name?} {--R|resource=} {--T|type=} {--panel=} {--F|force}';
+    protected $signature = 'module:make-filament-page {module?} {name?} {--R|resource=} {--T|type=} {--panel=} {--F|force}';
 
     public function handle(): int
     {

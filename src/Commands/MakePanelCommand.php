@@ -14,7 +14,7 @@ class MakePanelCommand extends Command
 
     protected $description = 'Create a new Filament panel';
 
-    protected $signature = 'module:filament-panel {module?} {id?} {--F|force}';
+    protected $signature = 'module:make-filament-panel {module?} {id?} {--F|force}';
 
     public function handle(): int
     {

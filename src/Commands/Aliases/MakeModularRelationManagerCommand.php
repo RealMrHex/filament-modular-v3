@@ -8,5 +8,5 @@ class MakeModularRelationManagerCommand extends Commands\MakeRelationManagerComm
 {
     protected $hidden = true;
 
-    protected $signature = 'module:filament-relation-manager {module?} {resource?} {relationship?} {recordTitleAttribute?} {--attach} {--associate} {--soft-deletes} {--view} {--panel=} {--F|force}';
+    protected $signature = 'module:make-filament-relation-manager {module?} {resource?} {relationship?} {recordTitleAttribute?} {--attach} {--associate} {--soft-deletes} {--view} {--panel=} {--F|force}';
 }

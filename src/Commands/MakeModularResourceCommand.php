@@ -13,7 +13,6 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Throwable;
-
 use function Laravel\Prompts\select;
 use function Laravel\Prompts\text;
 
@@ -27,31 +26,32 @@ class MakeModularResourceCommand extends Command
 
     protected $description = 'Create a new Filament resource class and default page classes';
 
-    protected $signature = 'filament-module:resource {module?} {name?} {--soft-deletes} {--view} {--G|generate} {--S|simple} {--panel=} {--F|force}';
+    protected $signature = 'module:filament-resource {module?} {name?} {--soft-deletes} {--view} {--G|generate} {--S|simple} {--panel=} {--F|force}';
 
     public function handle(): int
     {
-
-        $module_name = $this->argument('module') ?? text(
-            label: 'What is the module name?',
-            placeholder: 'User',
-            required: true,
-        );
-        $module_name = Str::of($module_name)->studly()->toString();
-        $module = null;
-        $moduleNamespace = null;
-        try {
+        FindModule:
+        try
+        {
+            $module_name = $this->argument('module') ?? text(
+                label      : 'What is the module name?',
+                placeholder: 'User',
+                required   : true,
+            );
+            $module_name = Str::of($module_name)->studly()->toString();
             $module = app('modules')->findOrFail($module_name);
-        } catch (Throwable $exception) {
-            $this->error('module not found');
+        }
+        catch (Throwable)
+        {
+            $this->components->warn('Module not found, make sure module exists and try again.');
 
-            return static::INVALID;
+            goto FindModule;
         }
 
-        $model = (string) str($this->argument('name') ?? text(
-            label: 'What is the model name?',
+        $model = (string)str($this->argument('name') ?? text(
+            label      : 'What is the model name?',
             placeholder: 'BlogPost',
-            required: true,
+            required   : true,
         ))
             ->studly()
             ->beforeLast('Resource')
@@ -59,34 +59,40 @@ class MakeModularResourceCommand extends Command
             ->trim('\\')
             ->trim(' ')
             ->studly()
-            ->replace('/', '\\');
+            ->replace('/', '\\')
+        ;
 
-        if (blank($model)) {
+        if (blank($model))
+        {
             $model = 'Resource';
         }
 
-        $modelClass = (string) str($model)->afterLast('\\');
-        $modelNamespace = str($model)->contains('\\') ?
-            (string) str($model)->beforeLast('\\') :
+        $modelClass = (string)str($model)->afterLast('\\');
+        $modelNamespace = str($model)->contains('\\')
+            ?
+            (string)str($model)->beforeLast('\\')
+            :
             '';
-        $pluralModelClass = (string) str($modelClass)->pluralStudly();
+        $pluralModelClass = (string)str($modelClass)->pluralStudly();
 
         $panel = $this->option('panel');
 
-        if ($panel) {
+        if ($panel)
+        {
             $panel = Filament::getPanel($panel);
         }
 
-        if (! $panel) {
+        if (!$panel)
+        {
             $panels = Filament::getPanels();
 
             /** @var Panel $panel */
             $panel = (count($panels) > 1) ? $panels[select(
-                label: 'Which panel would you like to create this in?',
+                label  : 'Which panel would you like to create this in?',
                 options: array_map(
-                    fn (Panel $panel): string => $panel->getId(),
-                    $panels,
-                ),
+                             fn(Panel $panel): string => $panel->getId(),
+                             $panels,
+                         ),
                 default: Filament::getDefaultPanel()->getId()
             )] : Arr::first($panels);
         }
@@ -94,75 +100,81 @@ class MakeModularResourceCommand extends Command
         $resourceDirectories = $panel->getResourceDirectories();
         $resourceNamespaces = $panel->getResourceNamespaces();
 
-        $panelId = (string) str($panel->getId())->studly();
+        $panelId = (string)str($panel->getId())->studly();
 
-        $resourceModuleDirectory = $module->getPath()."/Filament/{$panelId}/Resources/";
-        $moduleNamespace = config('modules.namespace')."\\{$module->getName()}\Filament\\{$panelId}\Resources";
+        $resourceModuleDirectory = $module->getPath() . "/Filament/$panelId/Resources/";
+        $moduleNamespace = config('modules.namespace') . "\\{$module->getName()}\Filament\\$panelId\Resources";
 
-        $namespace = (count($resourceNamespaces) > 1) ?
+        $namespace = (count($resourceNamespaces) > 1)
+            ?
             select(
-                label: 'Which namespace would you like to create this in?',
+                label  : 'Which namespace would you like to create this in?',
                 options: $resourceNamespaces
-            ) :
+            )
+            :
             (Arr::first($resourceNamespaces) ?? $module->getPath());
-        $path = (count($resourceDirectories) > 1) ?
-            $resourceDirectories[array_search($namespace, $resourceNamespaces)] :
+        $path = (count($resourceDirectories) > 1)
+            ?
+            $resourceDirectories[array_search($namespace, $resourceNamespaces)]
+            :
             (Arr::first($resourceDirectories) ?? $resourceModuleDirectory);
 
         $resource = "{$model}Resource";
         $resourceClass = "{$modelClass}Resource";
-        $resourceNamespace = $modelNamespace;
-        $namespace .= $resourceNamespace !== '' ? "\\{$resourceNamespace}" : '';
         $namespace = $moduleNamespace;
-        $listResourcePageClass = "List{$pluralModelClass}";
-        $manageResourcePageClass = "Manage{$pluralModelClass}";
-        $createResourcePageClass = "Create{$modelClass}";
-        $editResourcePageClass = "Edit{$modelClass}";
-        $viewResourcePageClass = "View{$modelClass}";
+        $listResourcePageClass = "List$pluralModelClass";
+        $manageResourcePageClass = "Manage$pluralModelClass";
+        $createResourcePageClass = "Create$modelClass";
+        $editResourcePageClass = "Edit$modelClass";
+        $viewResourcePageClass = "View$modelClass";
 
         $baseResourcePath =
-            (string) str($resource)
+            (string)str($resource)
                 ->prepend('/')
                 ->prepend($path)
                 ->replace('\\', '/')
                 ->replace('//', '/')
-                ->replace(app_path(), $module->getPath());
+                ->replace(app_path(), $module->getPath())
+        ;
 
-        $resourcePath = "{$baseResourcePath}.php";
-        $resourcePagesDirectory = "{$baseResourcePath}/Pages";
-        $listResourcePagePath = "{$resourcePagesDirectory}/{$listResourcePageClass}.php";
-        $manageResourcePagePath = "{$resourcePagesDirectory}/{$manageResourcePageClass}.php";
-        $createResourcePagePath = "{$resourcePagesDirectory}/{$createResourcePageClass}.php";
-        $editResourcePagePath = "{$resourcePagesDirectory}/{$editResourcePageClass}.php";
-        $viewResourcePagePath = "{$resourcePagesDirectory}/{$viewResourcePageClass}.php";
+        $resourcePath = "$baseResourcePath.php";
+        $resourcePagesDirectory = "$baseResourcePath/Pages";
+        $listResourcePagePath = "$resourcePagesDirectory/$listResourcePageClass.php";
+        $manageResourcePagePath = "$resourcePagesDirectory/$manageResourcePageClass.php";
+        $createResourcePagePath = "$resourcePagesDirectory/$createResourcePageClass.php";
+        $editResourcePagePath = "$resourcePagesDirectory/$editResourcePageClass.php";
+        $viewResourcePagePath = "$resourcePagesDirectory/$viewResourcePageClass.php";
 
-        if (! $this->option('force') && $this->checkForCollision([
-            $resourcePath,
-            $listResourcePagePath,
-            $manageResourcePagePath,
-            $createResourcePagePath,
-            $editResourcePagePath,
-            $viewResourcePagePath,
-        ])) {
+        if (!$this->option('force') && $this->checkForCollision([
+                                                                    $resourcePath,
+                                                                    $listResourcePagePath,
+                                                                    $manageResourcePagePath,
+                                                                    $createResourcePagePath,
+                                                                    $editResourcePagePath,
+                                                                    $viewResourcePagePath,
+                                                                ]))
+        {
             return static::INVALID;
         }
 
-        $pages = '';
-        $pages .= '\'index\' => Pages\\'.($this->option('simple') ? $manageResourcePageClass : $listResourcePageClass).'::route(\'/\'),';
+        $pages = '\'index\' => Pages\\' . ($this->option('simple') ? $manageResourcePageClass : $listResourcePageClass) . '::route(\'/\'),';
 
-        if (! $this->option('simple')) {
-            $pages .= PHP_EOL."'create' => Pages\\{$createResourcePageClass}::route('/create'),";
+        if (!$this->option('simple'))
+        {
+            $pages .= PHP_EOL . "'create' => Pages\\$createResourcePageClass::route('/create'),";
 
-            if ($this->option('view')) {
-                $pages .= PHP_EOL."'view' => Pages\\{$viewResourcePageClass}::route('/{record}'),";
+            if ($this->option('view'))
+            {
+                $pages .= PHP_EOL . "'view' => Pages\\$viewResourcePageClass::route('/{record}'),";
             }
 
-            $pages .= PHP_EOL."'edit' => Pages\\{$editResourcePageClass}::route('/{record}/edit'),";
+            $pages .= PHP_EOL . "'edit' => Pages\\$editResourcePageClass::route('/{record}/edit'),";
         }
 
         $tableActions = [];
 
-        if ($this->option('view')) {
+        if ($this->option('view'))
+        {
             $tableActions[] = 'Tables\Actions\ViewAction::make(),';
         }
 
@@ -170,20 +182,24 @@ class MakeModularResourceCommand extends Command
 
         $relations = '';
 
-        if ($this->option('simple')) {
+        if ($this->option('simple'))
+        {
             $tableActions[] = 'Tables\Actions\DeleteAction::make(),';
 
-            if ($this->option('soft-deletes')) {
+            if ($this->option('soft-deletes'))
+            {
                 $tableActions[] = 'Tables\Actions\ForceDeleteAction::make(),';
                 $tableActions[] = 'Tables\Actions\RestoreAction::make(),';
             }
-        } else {
-            $relations .= PHP_EOL.'public static function getRelations(): array';
-            $relations .= PHP_EOL.'{';
-            $relations .= PHP_EOL.'    return [';
-            $relations .= PHP_EOL.'        //';
-            $relations .= PHP_EOL.'    ];';
-            $relations .= PHP_EOL.'}'.PHP_EOL;
+        }
+        else
+        {
+            $relations .= PHP_EOL . 'public static function getRelations(): array';
+            $relations .= PHP_EOL . '{';
+            $relations .= PHP_EOL . '    return [';
+            $relations .= PHP_EOL . '        //';
+            $relations .= PHP_EOL . '    ];';
+            $relations .= PHP_EOL . '}' . PHP_EOL;
         }
 
         $tableActions = implode(PHP_EOL, $tableActions);
@@ -200,76 +216,81 @@ class MakeModularResourceCommand extends Command
 
         $eloquentQuery = '';
 
-        if ($this->option('soft-deletes')) {
+        if ($this->option('soft-deletes'))
+        {
             $tableBulkActions[] = 'Tables\Actions\ForceDeleteBulkAction::make(),';
             $tableBulkActions[] = 'Tables\Actions\RestoreBulkAction::make(),';
 
-            $eloquentQuery .= PHP_EOL.PHP_EOL.'public static function getEloquentQuery(): Builder';
-            $eloquentQuery .= PHP_EOL.'{';
-            $eloquentQuery .= PHP_EOL.'    return parent::getEloquentQuery()';
-            $eloquentQuery .= PHP_EOL.'        ->withoutGlobalScopes([';
-            $eloquentQuery .= PHP_EOL.'            SoftDeletingScope::class,';
-            $eloquentQuery .= PHP_EOL.'        ]);';
-            $eloquentQuery .= PHP_EOL.'}';
+            $eloquentQuery .= PHP_EOL . PHP_EOL . 'public static function getEloquentQuery(): Builder';
+            $eloquentQuery .= PHP_EOL . '{';
+            $eloquentQuery .= PHP_EOL . '    return parent::getEloquentQuery()';
+            $eloquentQuery .= PHP_EOL . '        ->withoutGlobalScopes([';
+            $eloquentQuery .= PHP_EOL . '            SoftDeletingScope::class,';
+            $eloquentQuery .= PHP_EOL . '        ]);';
+            $eloquentQuery .= PHP_EOL . '}';
         }
 
         $tableBulkActions = implode(PHP_EOL, $tableBulkActions);
 
         $this->copyStubToApp('Resource', $resourcePath, [
-            'eloquentQuery' => $this->indentString($eloquentQuery, 1),
-            'formSchema' => $this->indentString($this->option('generate') ? $this->getResourceFormSchema(
-                'App\\Models'.($modelNamespace !== '' ? "\\{$modelNamespace}" : '').'\\'.$modelClass,
-            ) : '//', 4),
-            'model' => $model === 'Resource' ? 'Resource as ResourceModel' : $model,
-            'modelClass' => $model === 'Resource' ? 'ResourceModel' : $modelClass,
-            'namespace' => $namespace,
-            'pages' => $this->indentString($pages, 3),
-            'relations' => $this->indentString($relations, 1),
-            'resource' => "{$namespace}\\{$resourceClass}",
-            'resourceClass' => $resourceClass,
-            'tableActions' => $this->indentString($tableActions, 4),
-            'tableBulkActions' => $this->indentString($tableBulkActions, 5),
+            'eloquentQuery'          => $this->indentString($eloquentQuery),
+            'formSchema'             => $this->indentString($this->option('generate') ? $this->getResourceFormSchema(
+                'App\\Models' . ($modelNamespace !== '' ? "\\$modelNamespace" : '') . '\\' . $modelClass,
+            ) : '//',                                       4),
+            'model'                  => $model === 'Resource' ? 'Resource as ResourceModel' : $model,
+            'modelClass'             => $model === 'Resource' ? 'ResourceModel' : $modelClass,
+            'namespace'              => $namespace,
+            'pages'                  => $this->indentString($pages, 3),
+            'relations'              => $this->indentString($relations),
+            'resource'               => "$namespace\\$resourceClass",
+            'resourceClass'          => $resourceClass,
+            'tableActions'           => $this->indentString($tableActions, 4),
+            'tableBulkActions'       => $this->indentString($tableBulkActions, 5),
             'tableEmptyStateActions' => $this->indentString($tableEmptyStateActions, 4),
-            'tableColumns' => $this->indentString($this->option('generate') ? $this->getResourceTableColumns(
-                'App\Models'.($modelNamespace !== '' ? "\\{$modelNamespace}" : '').'\\'.$modelClass,
-            ) : '//', 4),
-            'tableFilters' => $this->indentString(
+            'tableColumns'           => $this->indentString($this->option('generate') ? $this->getResourceTableColumns(
+                'App\Models' . ($modelNamespace !== '' ? "\\$modelNamespace" : '') . '\\' . $modelClass,
+            ) : '//',                                       4),
+            'tableFilters'           => $this->indentString(
                 $this->option('soft-deletes') ? 'Tables\Filters\TrashedFilter::make(),' : '//',
                 4,
             ),
         ]);
 
-        if ($this->option('simple')) {
+        if ($this->option('simple'))
+        {
             $this->copyStubToApp('ResourceManagePage', $manageResourcePagePath, [
-                'namespace' => "{$namespace}\\{$resourceClass}\\Pages",
-                'resource' => "{$namespace}\\{$resourceClass}",
-                'resourceClass' => $resourceClass,
+                'namespace'         => "$namespace\\$resourceClass\\Pages",
+                'resource'          => "$namespace\\$resourceClass",
+                'resourceClass'     => $resourceClass,
                 'resourcePageClass' => $manageResourcePageClass,
             ]);
-        } else {
+        }
+        else
+        {
             $this->copyStubToApp('ResourceListPage', $listResourcePagePath, [
-                'namespace' => "{$namespace}\\{$resourceClass}\\Pages",
-                'resource' => "{$namespace}\\{$resourceClass}",
-                'resourceClass' => $resourceClass,
+                'namespace'         => "$namespace\\$resourceClass\\Pages",
+                'resource'          => "$namespace\\$resourceClass",
+                'resourceClass'     => $resourceClass,
                 'resourcePageClass' => $listResourcePageClass,
             ]);
 
             $this->copyStubToApp('ResourcePage', $createResourcePagePath, [
-                'baseResourcePage' => 'Filament\\Resources\\Pages\\CreateRecord',
+                'baseResourcePage'      => 'Filament\\Resources\\Pages\\CreateRecord',
                 'baseResourcePageClass' => 'CreateRecord',
-                'namespace' => "{$namespace}\\{$resourceClass}\\Pages",
-                'resource' => "{$namespace}\\{$resourceClass}",
-                'resourceClass' => $resourceClass,
-                'resourcePageClass' => $createResourcePageClass,
+                'namespace'             => "$namespace\\$resourceClass\\Pages",
+                'resource'              => "$namespace\\$resourceClass",
+                'resourceClass'         => $resourceClass,
+                'resourcePageClass'     => $createResourcePageClass,
             ]);
 
             $editPageActions = [];
 
-            if ($this->option('view')) {
+            if ($this->option('view'))
+            {
                 $this->copyStubToApp('ResourceViewPage', $viewResourcePagePath, [
-                    'namespace' => "{$namespace}\\{$resourceClass}\\Pages",
-                    'resource' => "{$namespace}\\{$resourceClass}",
-                    'resourceClass' => $resourceClass,
+                    'namespace'         => "$namespace\\$resourceClass\\Pages",
+                    'resource'          => "$namespace\\$resourceClass",
+                    'resourceClass'     => $resourceClass,
                     'resourcePageClass' => $viewResourcePageClass,
                 ]);
 
@@ -278,7 +299,8 @@ class MakeModularResourceCommand extends Command
 
             $editPageActions[] = 'Actions\DeleteAction::make(),';
 
-            if ($this->option('soft-deletes')) {
+            if ($this->option('soft-deletes'))
+            {
                 $editPageActions[] = 'Actions\ForceDeleteAction::make(),';
                 $editPageActions[] = 'Actions\RestoreAction::make(),';
             }
@@ -286,15 +308,15 @@ class MakeModularResourceCommand extends Command
             $editPageActions = implode(PHP_EOL, $editPageActions);
 
             $this->copyStubToApp('ResourceEditPage', $editResourcePagePath, [
-                'actions' => $this->indentString($editPageActions, 3),
-                'namespace' => "{$namespace}\\{$resourceClass}\\Pages",
-                'resource' => "{$namespace}\\{$resourceClass}",
-                'resourceClass' => $resourceClass,
+                'actions'           => $this->indentString($editPageActions, 3),
+                'namespace'         => "$namespace\\$resourceClass\\Pages",
+                'resource'          => "$namespace\\$resourceClass",
+                'resourceClass'     => $resourceClass,
                 'resourcePageClass' => $editResourcePageClass,
             ]);
         }
 
-        $this->components->info("Successfully created {$resource}!");
+        $this->components->info("Successfully created $resource!");
 
         return static::SUCCESS;
     }

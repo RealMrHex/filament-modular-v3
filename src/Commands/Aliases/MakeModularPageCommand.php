@@ -8,5 +8,5 @@ class MakeModularPageCommand extends Commands\MakePageCommand
 {
     protected $hidden = true;
 
-    protected $signature = 'module:filament-page {module?} {name?} {--R|resource=} {--T|type=} {--panel=} {--F|force}';
+    protected $signature = 'module:make-filament-page {module?} {name?} {--R|resource=} {--T|type=} {--panel=} {--F|force}';
 }

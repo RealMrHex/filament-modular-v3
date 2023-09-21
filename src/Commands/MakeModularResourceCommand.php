@@ -26,7 +26,7 @@ class MakeModularResourceCommand extends Command
 
     protected $description = 'Create a new Filament resource class and default page classes';
 
-    protected $signature = 'module:filament-resource {module?} {name?} {--soft-deletes} {--view} {--G|generate} {--S|simple} {--panel=} {--F|force}';
+    protected $signature = 'module:make-filament-resource {module?} {name?} {--soft-deletes} {--view} {--G|generate} {--S|simple} {--panel=} {--F|force}';
 
     public function handle(): int
     {

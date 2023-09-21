@@ -8,5 +8,5 @@ class MakePanelCommand extends Commands\MakePanelCommand
 {
     protected $hidden = true;
 
-    protected $signature = 'module:filament-panel {module?} {id?} {--F|force}';
+    protected $signature = 'module:make-filament-panel {module?} {id?} {--F|force}';
 }

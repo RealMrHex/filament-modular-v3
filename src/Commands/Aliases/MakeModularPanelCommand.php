@@ -4,7 +4,7 @@ namespace RealMrHex\FilamentModularV3\Commands\Aliases;
 
 use Filament\Commands;
 
-class MakePanelCommand extends Commands\MakePanelCommand
+class MakeModularPanelCommand extends Commands\MakePanelCommand
 {
     protected $hidden = true;
 

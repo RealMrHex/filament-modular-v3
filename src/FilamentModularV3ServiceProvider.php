@@ -10,7 +10,8 @@ use Nwidart\Modules\Laravel\Module;
 use RealMrHex\FilamentModularV3\Commands\MakeModularPageCommand;
 use RealMrHex\FilamentModularV3\Commands\MakeModularRelationManagerCommand;
 use RealMrHex\FilamentModularV3\Commands\MakeModularResourceCommand;
-use RealMrHex\FilamentModularV3\Commands\MakePanelCommand;
+use RealMrHex\FilamentModularV3\Commands\MakeModularPanelCommand;
+use RealMrHex\FilamentModularV3\Commands\MakeModularWidgetCommand;
 use RealMrHex\FilamentModularV3\Testing\TestsFilamentModularV3;
 use ReflectionException;
 use Spatie\LaravelPackageTools\Commands\InstallCommand;
@@ -300,7 +301,8 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
             MakeModularPageCommand::class,
             MakeModularRelationManagerCommand::class,
             MakeModularResourceCommand::class,
-            MakePanelCommand::class,
+            MakeModularPanelCommand::class,
+            MakeModularWidgetCommand::class,
         ];
 
         $aliases = [];

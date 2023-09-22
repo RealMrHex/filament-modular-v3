@@ -8,7 +8,7 @@ use Illuminate\Support\Str;
 use Throwable;
 use function Laravel\Prompts\text;
 
-class MakePanelCommand extends Command
+class MakeModularPanelCommand extends Command
 {
     use CanManipulateFiles;
 

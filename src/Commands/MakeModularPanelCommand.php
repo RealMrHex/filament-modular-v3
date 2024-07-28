@@ -63,6 +63,7 @@ class MakeModularPanelCommand extends Command
             'class'     => $class,
             'directory' => str($id)->studly(),
             'id'        => $id,
+            'module'    => $module_name,
             'namespace' => $moduleNamespace,
         ]);
 

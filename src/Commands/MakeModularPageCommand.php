@@ -109,66 +109,88 @@ class MakeModularPageCommand extends Command
             $panel = Filament::getPanel($panel);
         }
 
-        if (!$panel)
-        {
+        if (!$panel) {
             $panels = Filament::getPanels();
 
-            /** @var Panel $panel */
-            $panel = (count($panels) > 1) ? $panels[select(
-                label  : 'Which panel would you like to create this in?',
-                options: array_map(
-                             fn(Panel $panel): string => $panel->getId(),
-                             $panels,
-                         ),
-                default: Filament::getDefaultPanel()->getId()
-            )] : Arr::first($panels);
+            $panelOptions = array_map(
+                fn (Panel $panel): string => $panel->getId(),
+                $panels,
+
+            );
+
+            $selectedPanel = select(
+                label: 'Do you want to create this page for a panel?',
+                options: [true => 'Yes', false => 'No'],
+                default: false,
+            );
+
+            if ($selectedPanel) {
+                /** @var Panel $panel */
+                $panel = (count($panels) > 1) ? $panels[select(
+                    label: 'In which panel would you like to create this in?',
+                    options: array_map(
+                        fn (Panel $panel): string => $panel->getId(),
+                        $panels,
+                    ),
+                    default: Filament::getDefaultPanel()->getId()
+                )] : Arr::first($panels);
+
+                $panelId = (string)str($panel->getId())->studly();
+            }
         }
 
-        $panelId = (string)str($panel->getId())->studly();
+        if (empty($resource)) {
+            if ($selectedPanel) {
+                $pageDirectories = $panel->getPageDirectories();
+                $pageNamespaces = $panel->getPageNamespaces();
 
-        if (empty($resource))
-        {
-            $pageDirectories = $panel->getPageDirectories();
-            $pageNamespaces = $panel->getPageNamespaces();
+                $pageModuleDirectory = $module->getPath() . "/Filament/$panelId/Pages/";
+                $moduleNamespace = config('modules.namespace') . "\\{$module->getName()}\Filament\\$panelId\Pages";
 
-            $pageModuleDirectory = $module->getPath() . "/Filament/$panelId/Pages/";
-            $moduleNamespace = config('modules.namespace') . "\\{$module->getName()}\Filament\\$panelId\Pages";
+                $namespace = (count($pageNamespaces) > 1)
+                    ?
+                    select(
+                        label: 'Which namespace would you like to create this in?',
+                        options: $pageNamespaces
+                    )
+                    : (Arr::first($pageNamespaces) ?? $moduleNamespace);
+                $path = (count($pageDirectories) > 1)
+                    ?
+                    $pageDirectories[array_search($namespace, $pageNamespaces)]
+                    : (Arr::first($pageDirectories) ?? $pageModuleDirectory);
+            } else {
+                $pageModuleDirectory = $module->getPath() . "/Filament/Pages/";
+                $moduleNamespace = config('modules.namespace') . "\\{$module->getName()}\Filament\\Pages";
 
-            $namespace = (count($pageNamespaces) > 1)
-                ?
-                select(
-                    label  : 'Which namespace would you like to create this in?',
-                    options: $pageNamespaces
-                )
-                :
-                (Arr::first($pageNamespaces) ?? $moduleNamespace);
-            $path = (count($pageDirectories) > 1)
-                ?
-                $pageDirectories[array_search($namespace, $pageNamespaces)]
-                :
-                (Arr::first($pageDirectories) ?? $pageModuleDirectory);
-        }
-        else
-        {
-            $resourceDirectories = $panel->getResourceDirectories();
-            $resourceNamespaces = $panel->getResourceNamespaces();
+                $namespace = $moduleNamespace;
+                $path = $pageModuleDirectory;
+            }
+        } else {
+            if ($selectedPanel) {
+                $resourceDirectories = $panel->getResourceDirectories();
+                $resourceNamespaces = $panel->getResourceNamespaces();
 
-            $resourceModuleDirectory = $module->getPath() . "/Filament/$panelId/Resources/";
-            $moduleNamespace = config('modules.namespace') . "\\{$module->getName()}\Filament\\$panelId\Resources";
+                $resourceModuleDirectory = $module->getPath() . "/Filament/$panelId/Resources/";
+                $moduleNamespace = config('modules.namespace') . "\\{$module->getName()}\Filament\\$panelId\Resources";
 
-            $resourceNamespace = (count($resourceNamespaces) > 1)
-                ?
-                select(
-                    label  : 'Which namespace would you like to create this in?',
-                    options: $resourceNamespaces
-                )
-                :
-                (Arr::first($resourceNamespaces) ?? $moduleNamespace);
-            $resourcePath = (count($resourceDirectories) > 1)
-                ?
-                $resourceDirectories[array_search($resourceNamespace, $resourceNamespaces)]
-                :
-                (Arr::first($resourceDirectories) ?? $resourceModuleDirectory);
+                $resourceNamespace = (count($resourceNamespaces) > 1)
+                    ?
+                    select(
+                        label: 'Which namespace would you like to create this in?',
+                        options: $resourceNamespaces
+                    )
+                    : (Arr::first($resourceNamespaces) ?? $moduleNamespace);
+                $resourcePath = (count($resourceDirectories) > 1)
+                    ?
+                    $resourceDirectories[array_search($resourceNamespace, $resourceNamespaces)]
+                    : (Arr::first($resourceDirectories) ?? $resourceModuleDirectory);
+            } else {
+                $resourceModuleDirectory = $module->getPath() . "/Filament/Resources/";
+                $moduleNamespace = config('modules.namespace') . "\\{$module->getName()}\Filament\\Resources";
+
+                $resourceNamespace = $moduleNamespace;
+                $resourcePath = $resourceModuleDirectory;
+            }
         }
 
 

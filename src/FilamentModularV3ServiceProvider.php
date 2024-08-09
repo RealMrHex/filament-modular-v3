@@ -81,7 +81,7 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
     private function discoverResourcesMacro(): void
     {
         Panel::macro('discoverModulesResources', function () {
-            $resourcesList = Cache::rememberForever('resources', function () {
+            $resourcesList = Cache::rememberForever('filament_module_v3_resources', function () {
                 $resourcesList = [];
                 $modules = app()['modules']->allEnabled();
                 $panelId = Str::of($this->getId())->studly();
@@ -111,7 +111,7 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
     private function discoverPagesMacro(): void
     {
         Panel::macro('discoverModulesPages', function () {
-            $pagesList = Cache::rememberForever('pages', function () {
+            $pagesList = Cache::rememberForever('filament_module_v3_pages', function () {
                 $pagesList = [];
                 $modules = app()['modules']->allEnabled();
                 $panelId = Str::of($this->getId())->studly();
@@ -145,7 +145,7 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
     private function discoverWidgetsMacro(): void
     {
         Panel::macro('discoverModulesWidgets', function () {
-            $widgetsList = Cache::rememberForever('widgets', function () {
+            $widgetsList = Cache::rememberForever('filament_module_v3_widgets', function () {
                 $widgetsList = [];
                 $modules = app()['modules']->allEnabled();
                 $panelId = Str::of($this->getId())->studly();

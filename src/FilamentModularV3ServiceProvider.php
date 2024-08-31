@@ -81,11 +81,14 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
     private function discoverResourcesMacro(): void
     {
         Panel::macro('discoverModulesResources', function () {
-            $resourcesList = Cache::rememberForever('filament_module_v3_resources', function () {
+
+            $panelId = Str::of($this->getId())->studly();
+
+            $resourcesList = Cache::rememberForever('filament_module_v3_resources_'.$panelId, function () use($panelId){
+
                 $resourcesList = [];
                 $modules = app()['modules']->allEnabled();
-                $panelId = Str::of($this->getId())->studly();
-
+                
                 foreach ($modules as $module) {
                     $filamentDir = "{$module->getPath()}/Filament/$panelId/Resources";
                     if (is_dir($filamentDir)) {
@@ -111,10 +114,13 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
     private function discoverPagesMacro(): void
     {
         Panel::macro('discoverModulesPages', function () {
-            $pagesList = Cache::rememberForever('filament_module_v3_pages', function () {
+
+            $panelId = Str::of($this->getId())->studly();
+
+            $pagesList = Cache::rememberForever('filament_module_v3_pages_'.$panelId, function () use($panelId) {
+
                 $pagesList = [];
                 $modules = app()['modules']->allEnabled();
-                $panelId = Str::of($this->getId())->studly();
 
                 foreach ($modules as $module) {
                     $filamentDir = "{$module->getPath()}/Filament/$panelId/Pages";
@@ -145,10 +151,14 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
     private function discoverWidgetsMacro(): void
     {
         Panel::macro('discoverModulesWidgets', function () {
-            $widgetsList = Cache::rememberForever('filament_module_v3_widgets', function () {
+
+            $panelId = Str::of($this->getId())->studly();
+
+            
+            $widgetsList = Cache::rememberForever('filament_module_v3_widgets_'.$panelId, function () use($panelId) {
                 $widgetsList = [];
                 $modules = app()['modules']->allEnabled();
-                $panelId = Str::of($this->getId())->studly();
+                
 
                 foreach ($modules as $module) {
                     // Discover widgets in the main directory

@@ -28,12 +28,14 @@ class {{ class }} extends PanelProvider
             ->colors([
                 'primary' => Color::Amber,
             ])
-            ->discoverResources(in: app_path('Filament/{{ directory }}/Resources'), for: 'App\\Filament\\{{ directory }}\\Resources')
-            ->discoverPages(in: app_path('Filament/{{ directory }}/Pages'), for: 'App\\Filament\\{{ directory }}\\Pages')
+            ->login()
+            ->discoverClusters(in:module_path('{{ module }}') . '/Filament/{{ directory }}/Clusters', for: 'Modules\\{{ module }}\\Filament\\{{ directory }}\\Clusters')
+            ->discoverResources(in: module_path('{{ module }}') . '/Filament/{{ directory }}/Resources', for: 'Modules\\{{ module }}\\Filament\\{{ directory }}\\Resources')
+            ->discoverPages(in: module_path('{{ module }}') . '/Filament/{{ directory }}/Pages', for: 'Modules\\{{ module }}\\Filament\\{{ directory }}\\Pages')
             ->pages([
                 Pages\Dashboard::class,
             ])
-            ->discoverWidgets(in: app_path('Filament/{{ directory }}/Widgets'), for: 'App\\Filament\\{{ directory }}\\Widgets')
+            ->discoverWidgets(in: module_path('{{ module }}') . '/Filament/{{ directory }}/Widgets', for: 'Modules\\{{ module }}\\Filament\\{{ directory }}\\Widgets')
             ->widgets([
                 Widgets\AccountWidget::class,
                 Widgets\FilamentInfoWidget::class,

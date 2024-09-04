@@ -81,32 +81,49 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
     private function discoverResourcesMacro(): void
     {
         Panel::macro('discoverModulesResources', function () {
-
             $panelId = Str::of($this->getId())->studly();
+            $cacheKey = "filament_module_v3_resources_{$panelId}";
+            $cacheEnabled = config('filament-modular-v3.enable_auto_discover_cache', false) || app()->isProduction();
 
-            $resourcesList = Cache::rememberForever('filament_module_v3_resources_'.$panelId, function () use($panelId){
-
+            $discoverResourcesFromDirectory = function (string $directory, string $namespace) {
                 $resourcesList = [];
-                $modules = app()['modules']->allEnabled();
-                
-                foreach ($modules as $module) {
-                    $filamentDir = "{$module->getPath()}/Filament/$panelId/Resources";
-                    if (is_dir($filamentDir)) {
-                        foreach (scandir($filamentDir) as $resource) {
-                            if (preg_match('/^(.+)\.php$/', $resource, $matches)) {
-                                $resourceClass = "Modules\\{$module->getStudlyName()}\\Filament\\$panelId\\Resources\\{$matches[1]}";
-                                if (class_exists($resourceClass)) {
-                                    $resourcesList[] = $resourceClass;
-                                }
-                            }
+
+                if (!is_dir($directory)) {
+                    return $resourcesList;
+                }
+
+                foreach (scandir($directory) as $resource) {
+                    if (preg_match('/^(.+)\.php$/', $resource, $matches)) {
+                        $resourceClass = "{$namespace}\\{$matches[1]}";
+                        if (class_exists($resourceClass)) {
+                            $resourcesList[] = $resourceClass;
                         }
                     }
                 }
-                
+
                 return $resourcesList;
-            });
+            };
+
+            $getResourcesList = function () use ($panelId, $discoverResourcesFromDirectory) {
+                $resourcesList = [];
+                $modules = app('modules')->allEnabled();
+
+                foreach ($modules as $module) {
+                    $baseNamespace = "Modules\\{$module->getStudlyName()}\\Filament\\{$panelId}";
+                    $resourcesDir = "{$module->getPath()}/Filament/{$panelId}/Resources";
+
+                    $resourcesList = array_merge($resourcesList, $discoverResourcesFromDirectory($resourcesDir, $baseNamespace . '\\Resources'));
+                }
+
+                return $resourcesList;
+            };
+
+            $resourcesList = $cacheEnabled
+                ? Cache::rememberForever($cacheKey, $getResourcesList)
+                : $getResourcesList();
 
             $this->resources = array_merge($this->resources, $resourcesList);
+
             return $this;
         });
     }
@@ -114,32 +131,49 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
     private function discoverPagesMacro(): void
     {
         Panel::macro('discoverModulesPages', function () {
-
             $panelId = Str::of($this->getId())->studly();
+            $cacheKey = "filament_module_v3_pages_{$panelId}";
+            $cacheEnabled = config('filament-modular-v3.enable_auto_discover_cache', false) || app()->isProduction();
 
-            $pagesList = Cache::rememberForever('filament_module_v3_pages_'.$panelId, function () use($panelId) {
-
+            $discoverPagesFromDirectory = function (string $directory, string $namespace) {
                 $pagesList = [];
-                $modules = app()['modules']->allEnabled();
 
-                foreach ($modules as $module) {
-                    $filamentDir = "{$module->getPath()}/Filament/$panelId/Pages";
-                    if (is_dir($filamentDir)) {
-                        foreach (scandir($filamentDir) as $page) {
-                            if (preg_match('/^(.+)\.php$/', $page, $matches)) {
-                                $pageClass = "Modules\\{$module->getStudlyName()}\\Filament\\$panelId\\Pages\\{$matches[1]}";
-                                if (class_exists($pageClass)) {
-                                    $pagesList[] = $pageClass;
-                                }
-                            }
+                if (!is_dir($directory)) {
+                    return $pagesList;
+                }
+
+                foreach (scandir($directory) as $page) {
+                    if (preg_match('/^(.+)\.php$/', $page, $matches)) {
+                        $pageClass = "{$namespace}\\{$matches[1]}";
+                        if (class_exists($pageClass)) {
+                            $pagesList[] = $pageClass;
                         }
                     }
                 }
 
                 return $pagesList;
-            });
+            };
+
+            $getPagesList = function () use ($panelId, $discoverPagesFromDirectory) {
+                $pagesList = [];
+                $modules = app('modules')->allEnabled();
+
+                foreach ($modules as $module) {
+                    $baseNamespace = "Modules\\{$module->getStudlyName()}\\Filament\\{$panelId}";
+                    $pagesDir = "{$module->getPath()}/Filament/{$panelId}/Pages";
+
+                    $pagesList = array_merge($pagesList, $discoverPagesFromDirectory($pagesDir, $baseNamespace . '\\Pages'));
+                }
+
+                return $pagesList;
+            };
+
+            $pagesList = $cacheEnabled
+                ? Cache::rememberForever($cacheKey, $getPagesList)
+                : $getPagesList();
 
             $this->pages = array_merge($this->pages, $pagesList);
+
             foreach ($pagesList as $page) {
                 $this->queueLivewireComponentForRegistration($page);
             }
@@ -148,55 +182,61 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
         });
     }
 
+
     private function discoverWidgetsMacro(): void
     {
         Panel::macro('discoverModulesWidgets', function () {
-
             $panelId = Str::of($this->getId())->studly();
+            $cacheKey = "filament_module_v3_widgets_{$panelId}";
+            $cacheEnabled = config('filament-modular-v3.enable_auto_discover_cache', false) || app()->isProduction();
 
-            
-            $widgetsList = Cache::rememberForever('filament_module_v3_widgets_'.$panelId, function () use($panelId) {
+            $discoverWidgetsFromDirectory = function (string $directory, string $namespace) {
                 $widgetsList = [];
-                $modules = app()['modules']->allEnabled();
-                
 
-                foreach ($modules as $module) {
-                    // Discover widgets in the main directory
-                    $widgetsDir = "{$module->getPath()}/Filament/$panelId/Widgets";
-                    if (is_dir($widgetsDir)) {
-                        foreach (scandir($widgetsDir) as $widget) {
-                            if (preg_match('/^(.+)\.php$/', $widget, $matches)) {
-                                $widgetClass = "Modules\\{$module->getStudlyName()}\\Filament\\$panelId\\Widgets\\{$matches[1]}";
-                                if (class_exists($widgetClass)) {
-                                    $widgetsList[] = $widgetClass;
-                                }
-                            }
-                        }
-                    }
+                if (!is_dir($directory)) {
+                    return $widgetsList;
+                }
 
-                    // Discover widgets in the resources directory
-                    $resourcesDir = "{$module->getPath()}/Filament/$panelId/Resources";
-                    if (is_dir($resourcesDir)) {
-                        foreach (scandir($resourcesDir) as $resource) {
-                            if (is_dir("$resourcesDir/$resource/Widgets")) {
-                                $resourceWidgetsDir = "$resourcesDir/$resource/Widgets";
-                                foreach (scandir($resourceWidgetsDir) as $widget) {
-                                    if (preg_match('/^(.+)\.php$/', $widget, $matches)) {
-                                        $widgetClass = "Modules\\{$module->getStudlyName()}\\Filament\\$panelId\\Resources\\$resource\\Widgets\\{$matches[1]}";
-                                        if (class_exists($widgetClass)) {
-                                            $widgetsList[] = $widgetClass;
-                                        }
-                                    }
-                                }
-                            }
+                foreach (scandir($directory) as $widget) {
+                    if (preg_match('/^(.+)\.php$/', $widget, $matches)) {
+                        $widgetClass = "{$namespace}\\{$matches[1]}";
+                        if (class_exists($widgetClass)) {
+                            $widgetsList[] = $widgetClass;
                         }
                     }
                 }
 
                 return $widgetsList;
-            });
+            };
+
+            $getWidgetList = function () use ($panelId, $discoverWidgetsFromDirectory) {
+                $widgetsList = [];
+                $modules = app('modules')->allEnabled();
+
+                foreach ($modules as $module) {
+                    $baseNamespace = "Modules\\{$module->getStudlyName()}\\Filament\\{$panelId}";
+
+                    $widgetsDir = "{$module->getPath()}/Filament/{$panelId}/Widgets";
+                    $widgetsList = array_merge($widgetsList, $discoverWidgetsFromDirectory($widgetsDir, $baseNamespace . '\\Widgets'));
+
+                    $resourcesDir = "{$module->getPath()}/Filament/{$panelId}/Resources";
+                    if (is_dir($resourcesDir)) {
+                        foreach (scandir($resourcesDir) as $resource) {
+                            $resourceWidgetsDir = "{$resourcesDir}/{$resource}/Widgets";
+                            $widgetsList = array_merge($widgetsList, $discoverWidgetsFromDirectory($resourceWidgetsDir, "{$baseNamespace}\\Resources\\{$resource}\\Widgets"));
+                        }
+                    }
+                }
+
+                return $widgetsList;
+            };
+
+            $widgetsList = $cacheEnabled 
+                ? Cache::rememberForever($cacheKey, $getWidgetList) 
+                : $getWidgetList();
 
             $this->widgets = array_merge($this->widgets, $widgetsList);
+
             foreach ($widgetsList as $widget) {
                 $this->queueLivewireComponentForRegistration($this->normalizeWidgetClass($widget));
             }
@@ -233,16 +273,5 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
         }, $commands));
 
         return array_merge($commands, $aliases);
-    }
-
-    private function discoverModulesWithCache(string $key, callable $callback)
-    {
-        $cacheEnabled = config('filament-modular-v3.enable_auto_discover_cache', false) || app()->isProduction();
-
-        if ($cacheEnabled) {
-            return Cache::rememberForever($key, $callback);
-        }
-
-        return $callback();
     }
 }

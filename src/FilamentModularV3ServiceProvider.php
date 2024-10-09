@@ -47,7 +47,13 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
         $modules = $this->app['modules']->allEnabled();
 
         foreach ($modules as $module) {
+            // Discover panels
             $this->discoverPanels($module);
+
+            // Register module configurations
+            if (!file_exists(base_path('bootstrap/cache/config.php'))) {
+                $this->registerConfigs($module);
+            }
         }
     }
 
@@ -59,16 +65,15 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
             return;
         }
 
-        $providers = scandir($providersDir);
+        foreach (glob($providersDir . '/*.php') as $providerFile) {
+            $provider = basename($providerFile, '.php');
+            $providerClass = "Modules\\{$module->getStudlyName()}\\Providers\\Filament\\Panels\\{$provider}";
 
-        foreach ($providers as $provider) {
-            if (preg_match('/^(.+)\.php$/', $provider, $matches)) {
-                $providerClass = "Modules\\{$module->getStudlyName()}\\Providers\\Filament\\Panels\\{$matches[1]}";
-                if (class_exists($providerClass)) {
-                    $this->app->register($providerClass);
-                }
+            if (class_exists($providerClass)) {
+                $this->app->register($providerClass);
             }
         }
+
     }
 
     private function registerModuleDiscoveryMacros(): void
@@ -274,4 +279,19 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
 
         return array_merge($commands, $aliases);
     }
+
+    protected function registerConfigs(Module $module): void
+    {
+        $configPath = "{$module->getPath()}/Config";
+
+        if (!is_dir($configPath)) {
+            return;
+        }
+
+        foreach (glob($configPath . '/*.php') as $configFile) {
+            $filename = pathinfo($configFile, PATHINFO_FILENAME);
+            config()->set($filename, array_merge(config()->get($filename, []), require $configFile));
+        }
+    }
+
 }

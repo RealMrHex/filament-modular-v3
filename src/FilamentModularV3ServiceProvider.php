@@ -54,6 +54,10 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
             if (!file_exists(base_path('bootstrap/cache/config.php'))) {
                 $this->registerConfigs($module);
             }
+
+            // Register module translations
+            $this->registerTranslations($module);
+
         }
     }
 
@@ -236,8 +240,8 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
                 return $widgetsList;
             };
 
-            $widgetsList = $cacheEnabled 
-                ? Cache::rememberForever($cacheKey, $getWidgetList) 
+            $widgetsList = $cacheEnabled
+                ? Cache::rememberForever($cacheKey, $getWidgetList)
                 : $getWidgetList();
 
             $this->widgets = array_merge($this->widgets, $widgetsList);
@@ -293,5 +297,20 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
             config()->set($filename, array_merge(config()->get($filename, []), require $configFile));
         }
     }
+
+    public function registerTranslations(Module $module): void
+    {
+
+        $translationPath = "{$module->getPath()}/Lang";
+
+        if (!is_dir($translationPath)) {
+            return;
+        }
+
+        $this->loadJsonTranslationsFrom($translationPath);
+        $this->loadTranslationsFrom($translationPath, $module->getLowerName());
+
+    }
+
 
 }

@@ -65,16 +65,15 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
             return;
         }
 
-        $providers = scandir($providersDir);
+        foreach (glob($providersDir . '/*.php') as $providerFile) {
+            $provider = basename($providerFile, '.php');
+            $providerClass = "Modules\\{$module->getStudlyName()}\\Providers\\Filament\\Panels\\{$provider}";
 
-        foreach ($providers as $provider) {
-            if (preg_match('/^(.+)\.php$/', $provider, $matches)) {
-                $providerClass = "Modules\\{$module->getStudlyName()}\\Providers\\Filament\\Panels\\{$matches[1]}";
-                if (class_exists($providerClass)) {
-                    $this->app->register($providerClass);
-                }
+            if (class_exists($providerClass)) {
+                $this->app->register($providerClass);
             }
         }
+
     }
 
     private function registerModuleDiscoveryMacros(): void

@@ -52,7 +52,7 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
 
             // Register module configurations
             if (!file_exists(base_path('bootstrap/cache/config.php'))) {
-                $this->registerConfigs($module);
+                $this->registerModuleConfigs($module);
             }
 
             // Register module translations
@@ -284,7 +284,7 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
         return array_merge($commands, $aliases);
     }
 
-    protected function registerConfigs(Module $module): void
+    protected function registerModuleConfigs(Module $module): void
     {
         $configPath = "{$module->getPath()}/Config";
 

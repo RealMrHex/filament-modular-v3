@@ -62,7 +62,8 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
 
     private function discoverPanels($module): void
     {
-        $providersDir = "{$module->getPath()}/Providers/Filament/Panels";
+        $modulePath = $module->getPath() ?? $module['path'];
+        $providersDir = "{$modulePath}/Providers/Filament/Panels";
 
         if (!is_dir($providersDir)) {
             return;
@@ -117,8 +118,9 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
                 $modules = app('modules')->allEnabled();
 
                 foreach ($modules as $module) {
+                    $modulePath = $module->getPath() ?? $module['path'];
                     $baseNamespace = "Modules\\{$module->getStudlyName()}\\Filament\\{$panelId}";
-                    $resourcesDir = "{$module->getPath()}/Filament/{$panelId}/Resources";
+                    $resourcesDir = "{$modulePath}/Filament/{$panelId}/Resources";
 
                     $resourcesList = array_merge($resourcesList, $discoverResourcesFromDirectory($resourcesDir, $baseNamespace . '\\Resources'));
                 }
@@ -167,8 +169,9 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
                 $modules = app('modules')->allEnabled();
 
                 foreach ($modules as $module) {
+                    $modulePath = $module->getPath() ?? $module['path'];
                     $baseNamespace = "Modules\\{$module->getStudlyName()}\\Filament\\{$panelId}";
-                    $pagesDir = "{$module->getPath()}/Filament/{$panelId}/Pages";
+                    $pagesDir = "{$modulePath}/Filament/{$panelId}/Pages";
 
                     $pagesList = array_merge($pagesList, $discoverPagesFromDirectory($pagesDir, $baseNamespace . '\\Pages'));
                 }
@@ -222,12 +225,13 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
                 $modules = app('modules')->allEnabled();
 
                 foreach ($modules as $module) {
+                    $modulePath = $module->getPath() ?? $module['path'];
                     $baseNamespace = "Modules\\{$module->getStudlyName()}\\Filament\\{$panelId}";
 
-                    $widgetsDir = "{$module->getPath()}/Filament/{$panelId}/Widgets";
+                    $widgetsDir = "{$modulePath}/Filament/{$panelId}/Widgets";
                     $widgetsList = array_merge($widgetsList, $discoverWidgetsFromDirectory($widgetsDir, $baseNamespace . '\\Widgets'));
 
-                    $resourcesDir = "{$module->getPath()}/Filament/{$panelId}/Resources";
+                    $resourcesDir = "{$modulePath}/Filament/{$panelId}/Resources";
                     if (is_dir($resourcesDir)) {
                         foreach (scandir($resourcesDir) as $resource) {
                             $resourceWidgetsDir = "{$resourcesDir}/{$resource}/Widgets";
@@ -285,7 +289,8 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
 
     protected function registerModuleConfigs($module): void
     {
-        $configPath = "{$module->getPath()}/Config";
+        $modulePath = $module->getPath() ?? $module['path'];
+        $configPath = "{$modulePath}/Config";
 
         if (!is_dir($configPath)) {
             return;
@@ -300,7 +305,8 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
     public function registerTranslations($module): void
     {
 
-        $translationPath = "{$module->getPath()}/Lang";
+        $modulePath = $module->getPath() ?? $module['path'];
+        $translationPath = "{$modulePath}/Lang";
 
         if (!is_dir($translationPath)) {
             return;
@@ -310,6 +316,4 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
         $this->loadTranslationsFrom($translationPath, $module->getLowerName());
 
     }
-
-
 }

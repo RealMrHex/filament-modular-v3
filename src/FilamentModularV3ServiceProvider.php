@@ -56,13 +56,74 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
 
             // Register module translations
             $this->registerTranslations($module);
-
         }
+    }
+
+    /**
+     * Safely get the module path from either object or array
+     */
+    private function getModulePath($module): ?string
+    {
+        if (is_object($module) && method_exists($module, 'getPath')) {
+            return $module->getPath();
+        }
+        
+        if (is_array($module) && isset($module['path'])) {
+            return $module['path'];
+        }
+        
+        return null;
+    }
+
+    /**
+     * Safely get the module studly name from either object or array
+     */
+    private function getModuleStudlyName($module): ?string
+    {
+        if (is_object($module) && method_exists($module, 'getStudlyName')) {
+            return $module->getStudlyName();
+        }
+        
+        if (is_array($module) && isset($module['studly_name'])) {
+            return $module['studly_name'];
+        }
+        
+        if (is_array($module) && isset($module['name'])) {
+            return Str::studly($module['name']);
+        }
+        
+        return null;
+    }
+
+    /**
+     * Safely get the module lower name from either object or array
+     */
+    private function getModuleLowerName($module): ?string
+    {
+        if (is_object($module) && method_exists($module, 'getLowerName')) {
+            return $module->getLowerName();
+        }
+        
+        if (is_array($module) && isset($module['lower_name'])) {
+            return $module['lower_name'];
+        }
+        
+        if (is_array($module) && isset($module['name'])) {
+            return Str::lower($module['name']);
+        }
+        
+        return null;
     }
 
     private function discoverPanels($module): void
     {
-        $modulePath = $module->getPath() ?? $module['path'];
+        $modulePath = $this->getModulePath($module);
+        $moduleStudlyName = $this->getModuleStudlyName($module);
+
+        if (!$modulePath || !$moduleStudlyName) {
+            return;
+        }
+
         $providersDir = "{$modulePath}/Providers/Filament/Panels";
 
         if (!is_dir($providersDir)) {
@@ -71,25 +132,62 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
 
         foreach (glob($providersDir . '/*.php') as $providerFile) {
             $provider = basename($providerFile, '.php');
-            $providerClass = "Modules\\{$module->getStudlyName()}\\Providers\\Filament\\Panels\\{$provider}";
+            $providerClass = "Modules\\{$moduleStudlyName}\\Providers\\Filament\\Panels\\{$provider}";
 
             if (class_exists($providerClass)) {
                 $this->app->register($providerClass);
             }
         }
-
     }
 
     private function registerModuleDiscoveryMacros(): void
     {
-        $this->discoverResourcesMacro();
-        $this->discoverPagesMacro();
-        $this->discoverWidgetsMacro();
+        // Create reusable helper functions for module property access
+        $moduleHelpers = $this->createModuleHelpers();
+        
+        $this->discoverResourcesMacro($moduleHelpers);
+        $this->discoverPagesMacro($moduleHelpers);
+        $this->discoverWidgetsMacro($moduleHelpers);
     }
 
-    private function discoverResourcesMacro(): void
+    /**
+     * Create reusable helper functions for safely accessing module properties
+     */
+    private function createModuleHelpers(): array
     {
-        Panel::macro('discoverModulesResources', function () {
+        return [
+            'getModulePath' => function ($module) {
+                if (is_object($module) && method_exists($module, 'getPath')) {
+                    return $module->getPath();
+                }
+                
+                if (is_array($module) && isset($module['path'])) {
+                    return $module['path'];
+                }
+                
+                return null;
+            },
+            'getModuleStudlyName' => function ($module) {
+                if (is_object($module) && method_exists($module, 'getStudlyName')) {
+                    return $module->getStudlyName();
+                }
+                
+                if (is_array($module) && isset($module['studly_name'])) {
+                    return $module['studly_name'];
+                }
+                
+                if (is_array($module) && isset($module['name'])) {
+                    return Str::studly($module['name']);
+                }
+                
+                return null;
+            }
+        ];
+    }
+
+    private function discoverResourcesMacro(array $moduleHelpers): void
+    {
+        Panel::macro('discoverModulesResources', function () use ($moduleHelpers) {
             $panelId = Str::of($this->getId())->studly();
             $cacheKey = "filament_module_v3_resources_{$panelId}";
             $cacheEnabled = config('filament-modular-v3.enable_auto_discover_cache', false) || app()->isProduction();
@@ -113,13 +211,19 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
                 return $resourcesList;
             };
 
-            $getResourcesList = function () use ($panelId, $discoverResourcesFromDirectory) {
+            $getResourcesList = function () use ($panelId, $discoverResourcesFromDirectory, $moduleHelpers) {
                 $resourcesList = [];
                 $modules = app('modules')->allEnabled();
 
                 foreach ($modules as $module) {
-                    $modulePath = $module->getPath() ?? $module['path'];
-                    $baseNamespace = "Modules\\{$module->getStudlyName()}\\Filament\\{$panelId}";
+                    $modulePath = $moduleHelpers['getModulePath']($module);
+                    $moduleStudlyName = $moduleHelpers['getModuleStudlyName']($module);
+
+                    if (!$modulePath || !$moduleStudlyName) {
+                        continue;
+                    }
+
+                    $baseNamespace = "Modules\\{$moduleStudlyName}\\Filament\\{$panelId}";
                     $resourcesDir = "{$modulePath}/Filament/{$panelId}/Resources";
 
                     $resourcesList = array_merge($resourcesList, $discoverResourcesFromDirectory($resourcesDir, $baseNamespace . '\\Resources'));
@@ -138,9 +242,9 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
         });
     }
 
-    private function discoverPagesMacro(): void
+    private function discoverPagesMacro(array $moduleHelpers): void
     {
-        Panel::macro('discoverModulesPages', function () {
+        Panel::macro('discoverModulesPages', function () use ($moduleHelpers) {
             $panelId = Str::of($this->getId())->studly();
             $cacheKey = "filament_module_v3_pages_{$panelId}";
             $cacheEnabled = config('filament-modular-v3.enable_auto_discover_cache', false) || app()->isProduction();
@@ -164,13 +268,19 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
                 return $pagesList;
             };
 
-            $getPagesList = function () use ($panelId, $discoverPagesFromDirectory) {
+            $getPagesList = function () use ($panelId, $discoverPagesFromDirectory, $moduleHelpers) {
                 $pagesList = [];
                 $modules = app('modules')->allEnabled();
 
                 foreach ($modules as $module) {
-                    $modulePath = $module->getPath() ?? $module['path'];
-                    $baseNamespace = "Modules\\{$module->getStudlyName()}\\Filament\\{$panelId}";
+                    $modulePath = $moduleHelpers['getModulePath']($module);
+                    $moduleStudlyName = $moduleHelpers['getModuleStudlyName']($module);
+
+                    if (!$modulePath || !$moduleStudlyName) {
+                        continue;
+                    }
+
+                    $baseNamespace = "Modules\\{$moduleStudlyName}\\Filament\\{$panelId}";
                     $pagesDir = "{$modulePath}/Filament/{$panelId}/Pages";
 
                     $pagesList = array_merge($pagesList, $discoverPagesFromDirectory($pagesDir, $baseNamespace . '\\Pages'));
@@ -194,9 +304,9 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
     }
 
 
-    private function discoverWidgetsMacro(): void
+    private function discoverWidgetsMacro(array $moduleHelpers): void
     {
-        Panel::macro('discoverModulesWidgets', function () {
+        Panel::macro('discoverModulesWidgets', function () use ($moduleHelpers) {
             $panelId = Str::of($this->getId())->studly();
             $cacheKey = "filament_module_v3_widgets_{$panelId}";
             $cacheEnabled = config('filament-modular-v3.enable_auto_discover_cache', false) || app()->isProduction();
@@ -220,13 +330,19 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
                 return $widgetsList;
             };
 
-            $getWidgetList = function () use ($panelId, $discoverWidgetsFromDirectory) {
+            $getWidgetList = function () use ($panelId, $discoverWidgetsFromDirectory, $moduleHelpers) {
                 $widgetsList = [];
                 $modules = app('modules')->allEnabled();
 
                 foreach ($modules as $module) {
-                    $modulePath = $module->getPath() ?? $module['path'];
-                    $baseNamespace = "Modules\\{$module->getStudlyName()}\\Filament\\{$panelId}";
+                    $modulePath = $moduleHelpers['getModulePath']($module);
+                    $moduleStudlyName = $moduleHelpers['getModuleStudlyName']($module);
+
+                    if (!$modulePath || !$moduleStudlyName) {
+                        continue;
+                    }
+
+                    $baseNamespace = "Modules\\{$moduleStudlyName}\\Filament\\{$panelId}";
 
                     $widgetsDir = "{$modulePath}/Filament/{$panelId}/Widgets";
                     $widgetsList = array_merge($widgetsList, $discoverWidgetsFromDirectory($widgetsDir, $baseNamespace . '\\Widgets'));
@@ -289,7 +405,12 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
 
     protected function registerModuleConfigs($module): void
     {
-        $modulePath = $module->getPath() ?? $module['path'];
+        $modulePath = $this->getModulePath($module);
+
+        if (!$modulePath) {
+            return;
+        }
+
         $configPath = "{$modulePath}/Config";
 
         if (!is_dir($configPath)) {
@@ -304,8 +425,13 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
 
     public function registerTranslations($module): void
     {
+        $modulePath = $this->getModulePath($module);
+        $moduleLowerName = $this->getModuleLowerName($module);
 
-        $modulePath = $module->getPath() ?? $module['path'];
+        if (!$modulePath || !$moduleLowerName) {
+            return;
+        }
+
         $translationPath = "{$modulePath}/Lang";
 
         if (!is_dir($translationPath)) {
@@ -313,7 +439,6 @@ class FilamentModularV3ServiceProvider extends PackageServiceProvider
         }
 
         $this->loadJsonTranslationsFrom($translationPath);
-        $this->loadTranslationsFrom($translationPath, $module->getLowerName());
-
+        $this->loadTranslationsFrom($translationPath, $moduleLowerName);
     }
 }
